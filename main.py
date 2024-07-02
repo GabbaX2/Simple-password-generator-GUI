@@ -3,6 +3,8 @@ from PIL import Image, ImageTk, ImageDraw
 import string
 import secrets
 import datetime
+import sqlite3
+
 
 class CustomButton(tk.Button):
     def __init__(self, *args, **kwargs):
@@ -41,10 +43,12 @@ class CustomButton(tk.Button):
     def on_leave(self, event):
         self.config(image=self.photo)
 
+
 def generate_password(length):
     characters = string.ascii_uppercase + string.ascii_lowercase + string.digits
     password = ''.join(secrets.choice(characters) for i in range(length))
     return password
+
 
 def update_password():
     try:
@@ -53,20 +57,27 @@ def update_password():
             raise ValueError
         password = generate_password(length)
         password_text.set(password)
-        save_password_to_file(password)
+        save_password_to_db(password)
     except ValueError:
         password_text.set("Invalid length")
 
-def save_password_to_file(password):
-    with open("generated_passwords.txt", "a") as file:
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        file.write(f"{timestamp} - {password}\n")
+
+def save_password_to_db(password):
+    conn = sqlite3.connect('passwords.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS passwords
+                 (id INTEGER PRIMARY KEY, timestamp TEXT, password TEXT)''')
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    c.execute("INSERT INTO passwords (timestamp, password) VALUES (?, ?)", (timestamp, password))
+    conn.commit()
+    conn.close()
+
 
 def create_tooltip(widget, text):
     tooltip = tk.Toplevel(widget)
     tooltip.withdraw()
     tooltip.wm_overrideredirect(True)
-    label = tk.Label(tooltip, text=text, background="yellow", relief="solid", borderwidth=1, font=("Arial", 10))
+    label = tk.Label(tooltip, text=text, background="pink", relief="solid", borderwidth=1, font=("Arial", 10))
     label.pack()
 
     def on_enter(event):
@@ -82,17 +93,18 @@ def create_tooltip(widget, text):
     widget.bind("<Enter>", on_enter)
     widget.bind("<Leave>", on_leave)
 
+
 root = tk.Tk()
 root.title("Password Generator")
 root.geometry("700x450")
-root.configure(bg="#f0f0f0")
+root.configure(bg="#000000")
 
 password_text = tk.StringVar()
 
-frame = tk.Frame(root, bg="#f0f0f0")
+frame = tk.Frame(root, bg="#000000")
 frame.pack(pady=20)
 
-length_label = tk.Label(frame, text="Enter the length of the password:", bg="#f0f0f0", font=("Arial", 12))
+length_label = tk.Label(frame, text="Enter the length of the password:", bg="#000000", font=("Arial", 12))
 length_label.grid(row=0, column=0, padx=10, pady=10, sticky="e")
 length_entry = tk.Entry(frame, font=("Arial", 12))
 length_entry.grid(row=0, column=1, padx=10, pady=10)
@@ -103,7 +115,7 @@ create_tooltip(length_entry, "Enter a number for the password length")
 button = CustomButton(frame, text="Generate Password", command=update_password)
 button.grid(row=1, columnspan=2, pady=20)
 
-label = tk.Label(frame, textvariable=password_text, font=("Arial", 14), bg="#f0f0f0", fg="#4B0082")
+label = tk.Label(frame, textvariable=password_text, font=("Arial", 14), bg="#000000", fg="#4B0082")
 label.grid(row=2, columnspan=2, pady=20)
 
 root.mainloop()
