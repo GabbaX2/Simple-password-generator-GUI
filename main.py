@@ -5,7 +5,6 @@ import secrets
 import datetime
 import sqlite3
 
-
 class CustomButton(tk.Button):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -43,41 +42,39 @@ class CustomButton(tk.Button):
     def on_leave(self, event):
         self.config(image=self.photo)
 
-
 def generate_password(length):
     characters = string.ascii_uppercase + string.ascii_lowercase + string.digits
     password = ''.join(secrets.choice(characters) for i in range(length))
     return password
 
-
 def update_password():
     try:
         length = int(length_entry.get())
-        if length < 1:
+        account = account_entry.get().strip()
+        if length < 1 or not account:
             raise ValueError
         password = generate_password(length)
         password_text.set(password)
-        save_password_to_db(password)
+        save_password_to_db(account, password)
     except ValueError:
-        password_text.set("Invalid length")
+        password_text.set("Invalid length or account")
 
-
-def save_password_to_db(password):
+def save_password_to_db(account, password):
     conn = sqlite3.connect('passwords.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS passwords
-                 (id INTEGER PRIMARY KEY, timestamp TEXT, password TEXT)''')
+                 (id INTEGER PRIMARY KEY, timestamp TEXT, account TEXT, password TEXT)''')
+
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    c.execute("INSERT INTO passwords (timestamp, password) VALUES (?, ?)", (timestamp, password))
+    c.execute("INSERT INTO passwords (timestamp, account, password) VALUES (?, ?, ?)", (timestamp, account, password))
     conn.commit()
     conn.close()
-
 
 def create_tooltip(widget, text):
     tooltip = tk.Toplevel(widget)
     tooltip.withdraw()
     tooltip.wm_overrideredirect(True)
-    label = tk.Label(tooltip, text=text, background="pink", relief="solid", borderwidth=1, font=("Arial", 10))
+    label = tk.Label(tooltip, text=text, background="lightyellow", relief="solid", borderwidth=1, font=("Arial", 10))
     label.pack()
 
     def on_enter(event):
@@ -93,29 +90,34 @@ def create_tooltip(widget, text):
     widget.bind("<Enter>", on_enter)
     widget.bind("<Leave>", on_leave)
 
-
 root = tk.Tk()
 root.title("Password Generator")
-root.geometry("700x450")
-root.configure(bg="#000000")
+root.geometry("400x300")
+root.configure(bg="#1e1e1e")
 
 password_text = tk.StringVar()
 
-frame = tk.Frame(root, bg="#000000")
+frame = tk.Frame(root, bg="#1e1e1e")
 frame.pack(pady=20)
 
-length_label = tk.Label(frame, text="Enter the length of the password:", bg="#000000", font=("Arial", 12))
+length_label = tk.Label(frame, text="Password Length:", bg="#1e1e1e", fg="white", font=("Arial", 12))
 length_label.grid(row=0, column=0, padx=10, pady=10, sticky="e")
-length_entry = tk.Entry(frame, font=("Arial", 12))
+length_entry = tk.Entry(frame, font=("Arial", 12), bg="#333", fg="white", insertbackground="white")
 length_entry.grid(row=0, column=1, padx=10, pady=10)
 length_entry.focus()
 
+account_label = tk.Label(frame, text="Account:", bg="#1e1e1e", fg="white", font=("Arial", 12))
+account_label.grid(row=1, column=0, padx=10, pady=10, sticky="e")
+account_entry = tk.Entry(frame, font=("Arial", 12), bg="#333", fg="white", insertbackground="white")
+account_entry.grid(row=1, column=1, padx=10, pady=10)
+
 create_tooltip(length_entry, "Enter a number for the password length")
+create_tooltip(account_entry, "Enter the account associated with this password")
 
 button = CustomButton(frame, text="Generate Password", command=update_password)
-button.grid(row=1, columnspan=2, pady=20)
+button.grid(row=2, columnspan=2, pady=20)
 
-label = tk.Label(frame, textvariable=password_text, font=("Arial", 14), bg="#000000", fg="#4B0082")
-label.grid(row=2, columnspan=2, pady=20)
+label = tk.Label(frame, textvariable=password_text, font=("Arial", 14), bg="#1e1e1e", fg="#4B0082")
+label.grid(row=3, columnspan=2, pady=20)
 
 root.mainloop()
